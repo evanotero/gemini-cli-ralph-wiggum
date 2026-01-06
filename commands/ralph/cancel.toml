@@ -1,2 +1,2 @@
 description = "Cancels an active Ralph Wiggum loop."
-prompt = "!{{{extensionPath}}/scripts/cancel-ralph.sh}"
+prompt = "!{~/.gemini/extensions/ralph-wiggum/scripts/cancel-ralph.sh}"
