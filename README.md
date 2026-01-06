@@ -26,6 +26,15 @@ This creates a **self-referential feedback loop** where:
 
 ## Quick Start
 
+Before running the loop, ensure all necessary script files have execute permissions. This is crucial if you copied the extension files manually or if permissions were not preserved during transfer:
+
+```bash
+chmod +x ~/.gemini/extensions/ralph-wiggum/scripts/*.sh
+chmod +x ~/.gemini/extensions/ralph-wiggum/hooks/*.sh
+```
+
+Now, you can start the Ralph loop:
+
 ```bash
 /ralph:loop "Build a REST API for a to-do list. Requirements are: full CRUD operations, input validation, and unit tests. Output the phrase 'PROMISE_KEPT' when all tests pass and the API is fully functional." --completion-promise "PROMISE_KEPT" --max-iterations 25
 ```
