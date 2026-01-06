@@ -29,18 +29,20 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
+      # Non-option argument - collect all as prompt parts
       PROMPT_PARTS+=("$1")
       shift
       ;;
   esac
 done
 
-PROMPT="${PROMPT_PARTS[*]}"
-
-if [[ -z "$PROMPT" ]]; then
+# If no prompt parts were collected, raise an error immediately.
+if [ ${#PROMPT_PARTS[@]} -eq 0 ]; then
   echo "ERROR: No prompt provided for the loop." >&2
   exit 1
 fi
+
+PROMPT="${PROMPT_PARTS[*]}"
 
 # Create state directory and file
 mkdir -p .gemini
