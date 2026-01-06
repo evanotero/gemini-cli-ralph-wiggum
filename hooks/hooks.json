@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "name": "ralph-loop-controller",
+            "type": "command",
+            "command": "${extensionPath}/hooks/after-agent-hook.sh"
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "hooks": [
+          {
+            "name": "ralph-loop-injector",
+            "type": "command",
+            "command": "${extensionPath}/hooks/before-agent-hook.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
