@@ -29,11 +29,11 @@ fi
 # The Gemini CLI will prepend this to the user's (empty) input.
 jq -n \
   --arg prompt "$PROMPT_FROM_FILE" \
-  '{ 
-    "hookSpecificOutput": { 
-      "hookEventName": "BeforeAgent", 
-      "additionalContext": $prompt 
-    } 
+  '{
+    "hookSpecificOutput": {
+      "hookEventName": "BeforeAgent",
+      "additionalContext": $prompt
+    }
   }'
 
 exit 0

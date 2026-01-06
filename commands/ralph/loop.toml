@@ -1,2 +1,2 @@
 description = "Start Ralph Wiggum loop in current session"
-prompt = "!{{extensionPath}}/scripts/setup-ralph-loop.sh {{args}}"
+prompt = "!{../scripts/setup-ralph-loop.sh {{args}}}"
