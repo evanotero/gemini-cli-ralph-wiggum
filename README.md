@@ -2,6 +2,8 @@
 
 This extension implements the "Ralph Wiggum" technique for iterative, self-referential AI development loops within the Gemini CLI.
 
+![Ralph Wiggum](./header.jpg)
+
 ## What is the Ralph Wiggum Technique?
 
 The Ralph Wiggum technique is a development methodology based on continuous AI agent loops. As its creator, Geoffrey Huntley, describes it, "Ralph is a Bash loop"—a simple `while true` that repeatedly feeds an AI agent the same prompt, allowing it to iteratively improve its work until a task is complete.
