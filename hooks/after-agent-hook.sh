@@ -80,6 +80,13 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
     # Clean up all state files
     rm "$STATE_FILE"
     rm -f "$REPROMPT_FILE"
+    # Explicitly tell the CLI to stop the loop
+    jq -n \
+      --arg msg "✅ Ralph loop: Completion promise detected. Terminating." \
+      '{
+        "continue": false,
+        "systemMessage": $msg
+      }'
     exit 0
   fi
 fi
@@ -91,6 +98,13 @@ if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; th
   # Clean up all state files
   rm "$STATE_FILE"
   rm -f "$REPROMPT_FILE"
+  # Explicitly tell the CLI to stop the loop
+  jq -n \
+    --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating." \
+    '{
+      "continue": false,
+      "systemMessage": $msg
+    }'
   exit 0
 fi
 
