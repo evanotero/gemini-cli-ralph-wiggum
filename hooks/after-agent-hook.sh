@@ -98,11 +98,23 @@ fi
 
 NEXT_ITERATION=$((ITERATION + 1))
 # Use jq to update the iteration in-place.
-jq ".iteration = $NEXT_ITERATION" "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+if jq ".iteration = $NEXT_ITERATION" "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"; then
+  echo "DEBUG: State updated to iteration $NEXT_ITERATION" >> "$DEBUG_LOG"
+else
+  echo "ERROR: Failed to update state file" >> "$DEBUG_LOG"
+  exit 1
+fi
 
 # Create the reprompt file for the BeforeAgent hook to find.
 # Use printf to avoid adding a trailing newline, which ensures exact prompt matching in the next turn.
 printf "%s" "$ORIGINAL_PROMPT" > "$REPROMPT_FILE"
+
+# Verify write
+if [[ ! -s "$REPROMPT_FILE" ]]; then
+  echo "ERROR: Failed to write reprompt file" >> "$DEBUG_LOG"
+  exit 1
+fi
+echo "DEBUG: Reprompt file written (size: $(wc -c < "$REPROMPT_FILE"))" >> "$DEBUG_LOG"
 
 # Construct system message
 MAX_ITER_MSG_PART=$(if [[ "$MAX_ITERATIONS" -gt 0 ]]; then echo "/$MAX_ITERATIONS"; else echo " of ∞"; fi)
