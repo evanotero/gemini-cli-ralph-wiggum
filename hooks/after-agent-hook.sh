@@ -8,11 +8,18 @@ set -euo pipefail
 
 STATE_FILE=".gemini/ralph-loop.json"
 REPROMPT_FILE=".gemini/ralph-reprompt.tmp"
+DEBUG_LOG=".gemini/ralph-debug.log"
+
+# Trap errors
+trap 'echo "ERROR: Script crashed on line $LINENO" >> "$DEBUG_LOG"' ERR
 
 # If state file doesn't exist, the loop isn't active. Exit silently.
 if [[ ! -f "$STATE_FILE" ]]; then
   exit 0
 fi
+
+# Log start
+echo "DEBUG: Hook started. Iteration: $(jq -r '.iteration' "$STATE_FILE")" >> "$DEBUG_LOG"
 
 # Read all necessary data first.
 HOOK_INPUT=$(cat)
