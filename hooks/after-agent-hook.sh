@@ -108,12 +108,15 @@ if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; th
     '{
       "continue": false,
       "systemMessage": $msg,
-      "stopReason": ""🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."
+      "stopReason": "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."
     }'
   exit 0
 fi
 
 # --- Continuation Logic ---
+
+echo "DEBUG: Continuing to iteration $((ITERATION + 1))" >> "$DEBUG_LOG"
+echo "DEBUG: Input keys: $(echo "$HOOK_INPUT" | jq -r 'keys | join(", ")')" >> "$DEBUG_LOG"
 
 NEXT_ITERATION=$((ITERATION + 1))
 # Use jq to update the iteration in-place.
@@ -145,7 +148,7 @@ jq -n \
   '{
     "continue": true,
     "systemMessage": $msg,
-    "hookSpecificOutput": "🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task..."
+    "hookSpecificOutput": $msg
   }'
 
 exit 0
