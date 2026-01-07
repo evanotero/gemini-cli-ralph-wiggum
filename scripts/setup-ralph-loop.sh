@@ -55,11 +55,49 @@ fi
 
 PROMPT="${PROMPT_PARTS[*]}"
 
+# Construct the full prompt including instructions
+SYSTEM_INSTRUCTIONS=$(cat <<EOF
+
+---
+**SYSTEM INSTRUCTIONS: RALPH WIGGUM LOOP**
+
+You are now in a **persistent, self-correcting development loop**.
+1.  **Iterative Workflow:** When you complete this turn, the **exact same prompt** (above) will be fed back to you automatically.
+2.  **Memory:** You will see your previous work (files, git history) in the next iteration. Use this to refine, debug, and improve your solution step-by-step.
+3.  **Termination:** The loop continues INDEFINITELY until the termination condition is met.
+
+**CRITICAL RULE: COMPLETION PROMISE**
+If a "Completion promise" is defined above (e.g., specific text to output):
+*   You **MUST NOT** output that phrase until the condition is **100% GENUINELY TRUE**.
+*   **DO NOT LIE** to exit the loop. If tests are failing, fix them. If the feature is incomplete, finish it.
+*   **REQUIRED FORMAT:** When the condition is met, you must output the promise wrapped in XML tags like this:
+    \`<promise>YOUR_PROMISE_TEXT</promise>\`
+    (Example: \`<promise>PROMISE_KEPT</promise>\`)
+*   If you output the promise prematurely, you defeat the purpose of the loop.
+
+**Goal:** Work autonomously to satisfy the initial prompt completely.
+EOF
+)
+
+# Banner information
+MAX_ITER_TXT=$(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
+PROMISE_TXT=$(if [[ "$COMPLETION_PROMISE" != "null" ]]; then echo "'$COMPLETION_PROMISE'"; else echo "none"; fi)
+
+# Construct the exact text that will be the "Original Prompt"
+# We include the banner info so the model is aware of its constraints.
+FULL_PROMPT="🔄 Ralph loop activated!
+Max iterations: $MAX_ITER_TXT
+Completion promise: $PROMISE_TXT
+
+Initial prompt:
+$PROMPT
+$SYSTEM_INSTRUCTIONS"
+
 # Create state directory and file
 mkdir -p .gemini
 cat > .gemini/ralph-loop.json <<EOF
 {
-  "prompt": $(jq -n --arg prompt "$PROMPT" '$prompt'),
+  "prompt": $(jq -n --arg prompt "$FULL_PROMPT" '$prompt'),
   "iteration": 1,
   "max_iterations": $MAX_ITERATIONS,
   "completion_promise": $(jq -n --arg promise "$COMPLETION_PROMISE" '$promise'),
@@ -67,12 +105,9 @@ cat > .gemini/ralph-loop.json <<EOF
 }
 EOF
 
-# Output setup message
-echo "🔄 Ralph loop activated in this session!"
-echo "Max iterations: $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo $MAX_ITERATIONS; else echo "unlimited"; fi)"
-echo "Completion promise: $(if [[ "$COMPLETION_PROMISE" != "null" ]]; then echo "'$COMPLETION_PROMISE'"; else echo "none"; fi)"
-echo "The SessionEnd hook is now active. It will intercept session exit to continue the loop."
-echo "To manually stop, use the /cancel-ralph command."
-echo ""
-echo "Initial prompt:"
-echo "$PROMPT"
+# Output setup message (and prompt) to stdout for the model
+echo "$FULL_PROMPT"
+
+# Output info to stderr for the user (optional, but good for feedback if !{...} hides stdout)
+echo "🔄 Ralph loop activated! (See prompt for details)" >&2
+
