@@ -1,2 +1,20 @@
 description = "Start Ralph Wiggum loop in current session"
-prompt = "!{~/.gemini/extensions/ralph-wiggum/scripts/setup-ralph-loop.sh {{args}}}"
+prompt = """
+!{~/.gemini/extensions/ralph-wiggum/scripts/setup-ralph-loop.sh {{args}}}
+
+---
+**SYSTEM INSTRUCTIONS: RALPH WIGGUM LOOP**
+
+You are now in a **persistent, self-correcting development loop**.
+1.  **Iterative Workflow:** When you complete this turn, the **exact same prompt** (above) will be fed back to you automatically.
+2.  **Memory:** You will see your previous work (files, git history) in the next iteration. Use this to refine, debug, and improve your solution step-by-step.
+3.  **Termination:** The loop continues INDEFINITELY until the termination condition is met.
+
+**CRITICAL RULE: COMPLETION PROMISE**
+If a "Completion promise" is defined above (e.g., specific text to output):
+*   You **MUST NOT** output that phrase until the condition is **100% GENUINELY TRUE**.
+*   **DO NOT LIE** to exit the loop. If tests are failing, fix them. If the feature is incomplete, finish it.
+*   If you output the promise prematurely, you defeat the purpose of the loop.
+
+**Goal:** Work autonomously to satisfy the initial prompt completely.
+"""

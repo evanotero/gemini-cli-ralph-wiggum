@@ -1,2 +1,13 @@
 description = "Cancels an active Ralph Wiggum loop."
-prompt = "!{~/.gemini/extensions/ralph-wiggum/scripts/cancel-ralph.sh}"
+prompt = """
+!{~/.gemini/extensions/ralph-wiggum/scripts/cancel-ralph.sh}
+
+---
+**SYSTEM INSTRUCTIONS**
+
+The script above has attempted to cancel the Ralph Wiggum loop.
+*   **If successful:** It outputs the iteration number. Confirm cancellation to the user.
+*   **If no loop found:** It says so. Inform the user.
+
+**Action:** Summarize the status based purely on the script output above.
+"""
