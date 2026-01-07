@@ -27,9 +27,22 @@ CURRENT_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt')
 # 4. Otherwise, the user typed something new. EXIT (Interjection).
 
 if [[ -n "$CURRENT_PROMPT" ]]; then
-  if [[ "$CURRENT_PROMPT" != "$ORIGINAL_PROMPT" ]] && \
-     [[ "$CURRENT_PROMPT" != *"$ORIGINAL_PROMPT"* ]] && \
-     [[ "$ORIGINAL_PROMPT" != *"$CURRENT_PROMPT"* ]]; then
+  # Use Perl to check if one string contains the other (literally).
+  # We pass strings as env vars to avoid argument length limits or escaping issues.
+  export CURRENT_PROMPT ORIGINAL_PROMPT
+  if ! perl -e '
+      my $c = $ENV{CURRENT_PROMPT};
+      my $o = $ENV{ORIGINAL_PROMPT};
+      # 1. Exact match
+      exit 0 if $c eq $o;
+      # 2. Current contains Original (e.g. CLI added context wrapper)
+      exit 0 if index($c, $o) != -1;
+      # 3. Original contains Current (e.g. User typed a substring of the prompt?)
+      # This case is debatable but present in original logic to handle potential truncation.
+      exit 0 if index($o, $c) != -1;
+      # No match found -> Interjection.
+      exit 1;
+    '; then
      # User interjected.
      exit 0
   fi
