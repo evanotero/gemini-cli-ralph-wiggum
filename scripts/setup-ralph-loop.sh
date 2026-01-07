@@ -85,8 +85,7 @@ PROMISE_TXT=$(if [[ "$COMPLETION_PROMISE" != "null" ]]; then echo "'$COMPLETION_
 
 # Construct the exact text that will be the "Original Prompt"
 # We include the banner info so the model is aware of its constraints.
-FULL_PROMPT="🔄 Ralph loop activated!
-Max iterations: $MAX_ITER_TXT
+FULL_PROMPT="Max iterations: $MAX_ITER_TXT
 Completion promise: $PROMISE_TXT
 
 Initial prompt:
@@ -109,4 +108,4 @@ EOF
 printf "%s" "$FULL_PROMPT"
 
 # Output info to stderr for the user (optional, but good for feedback if !{...} hides stdout)
-echo "🔄 Ralph loop activated! (See prompt for details)" >&2
+echo "🔄 Ralph loop activated! " >&2
