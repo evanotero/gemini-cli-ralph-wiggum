@@ -10,6 +10,17 @@ PROMPT_PARTS=()
 MAX_ITERATIONS=0
 COMPLETION_PROMISE="null"
 
+# If we received a single argument that contains spaces, it's likely the full {{args}} string.
+# We use xargs to correctly split the string respecting quotes (shell-style parsing),
+# which is safer and more robust than simple whitespace splitting.
+if [[ $# -eq 1 ]] && [[ "$1" == *" "* ]]; then
+  SPLIT_ARGS=()
+  while IFS= read -r -d '' arg; do
+    SPLIT_ARGS+=("$arg")
+  done < <(printf "%s" "$1" | xargs printf "%s\0")
+  set -- "${SPLIT_ARGS[@]}"
+fi
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     --max-iterations)
