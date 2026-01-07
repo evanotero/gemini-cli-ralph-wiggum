@@ -147,8 +147,7 @@ jq -n \
   --arg msg "$SYSTEM_MSG" \
   '{
     "continue": true,
-    "systemMessage": $msg,
-    "hookSpecificOutput": $msg
+    "systemMessage": $msg
   }'
 
 exit 0
