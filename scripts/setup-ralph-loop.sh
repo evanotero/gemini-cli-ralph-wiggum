@@ -106,8 +106,7 @@ cat > .gemini/ralph-loop.json <<EOF
 EOF
 
 # Output setup message (and prompt) to stdout for the model
-echo "$FULL_PROMPT"
+printf "%s" "$FULL_PROMPT"
 
 # Output info to stderr for the user (optional, but good for feedback if !{...} hides stdout)
 echo "🔄 Ralph loop activated! (See prompt for details)" >&2
-
