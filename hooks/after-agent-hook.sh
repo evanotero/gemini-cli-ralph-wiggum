@@ -24,21 +24,28 @@ fi
 
 # Read all necessary data first.
 HOOK_INPUT=$(cat)
-# log "Hook Input: $HOOK_INPUT" # Commented out to reduce noise, enable if needed
-
 ORIGINAL_PROMPT=$(jq -r '.prompt' "$STATE_FILE")
 CURRENT_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt')
 
 # Handle user interjection.
-if [[ "$CURRENT_PROMPT" != "$ORIGINAL_PROMPT" ]]; then
-  log "Interjection detected!"
-  log "Original len: ${#ORIGINAL_PROMPT}, Current len: ${#CURRENT_PROMPT}"
-  # log "Original: $ORIGINAL_PROMPT"
-  # log "Current: $CURRENT_PROMPT"
-  exit 0
+# Logic:
+# 1. If CURRENT_PROMPT is empty, it's a loop continuation (User hit Enter/Auto-run). PROCEED.
+# 2. If CURRENT_PROMPT matches ORIGINAL_PROMPT, it's the first turn or a re-prompt. PROCEED.
+# 3. If CURRENT_PROMPT contains ORIGINAL_PROMPT (or vice versa), it's likely a formatting artifact. PROCEED.
+# 4. Otherwise, the user typed something new. EXIT (Interjection).
+
+if [[ -n "$CURRENT_PROMPT" ]]; then
+  if [[ "$CURRENT_PROMPT" != "$ORIGINAL_PROMPT" ]] && \
+     [[ "$CURRENT_PROMPT" != *"$ORIGINAL_PROMPT"* ]] && \
+     [[ "$ORIGINAL_PROMPT" != *"$CURRENT_PROMPT"* ]]; then
+     log "Interjection detected!"
+     log "Original len: ${#ORIGINAL_PROMPT}, Current len: ${#CURRENT_PROMPT}"
+     # User interjected.
+     exit 0
+  fi
 fi
 
-log "Prompt match confirmed. Proceeding."
+# -- This is a loop turn, proceed with main logic. --
 
 # Get other state variables.
 ITERATION=$(jq -r '.iteration' "$STATE_FILE")
