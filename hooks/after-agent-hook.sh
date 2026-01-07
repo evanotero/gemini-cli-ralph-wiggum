@@ -44,6 +44,12 @@ if [[ -n "$CURRENT_PROMPT" ]]; then
       exit 1;
     '; then
      # User interjected.
+     # LOGGING FOR DEBUGGING
+     echo "DEBUG: Ralph Interjection Detected!" >> .gemini/ralph-debug.log
+     echo "DEBUG: Original Prompt Length: ${#ORIGINAL_PROMPT}" >> .gemini/ralph-debug.log
+     echo "DEBUG: Current Prompt Length: ${#CURRENT_PROMPT}" >> .gemini/ralph-debug.log
+     echo "DEBUG: Original Start: ${ORIGINAL_PROMPT:0:50}" >> .gemini/ralph-debug.log
+     echo "DEBUG: Current Start: ${CURRENT_PROMPT:0:50}" >> .gemini/ralph-debug.log
      exit 0
   fi
 fi
