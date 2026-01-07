@@ -2,6 +2,7 @@
   "hooks": {
     "AfterAgent": [
       {
+        "matcher": "*",
         "hooks": [
           {
             "name": "ralph-loop-controller",
@@ -13,6 +14,7 @@
     ],
     "BeforeAgent": [
       {
+        "matcher": "*",
         "hooks": [
           {
             "name": "ralph-loop-injector",
