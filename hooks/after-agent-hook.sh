@@ -10,19 +10,21 @@ STATE_FILE=".gemini/ralph-loop.json"
 REPROMPT_FILE=".gemini/ralph-reprompt.tmp"
 DEBUG_LOG=".gemini/ralph-debug.log"
 
-# Trap errors
-trap 'echo "ERROR: Script crashed on line $LINENO" >> "$DEBUG_LOG"' ERR
+log() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S')] $*" >> "$DEBUG_LOG"
+}
 
 # Log start
-echo "DEBUG: Hook started." >> "$DEBUG_LOG"
+log "--- AfterAgent Hook Started ---"
 
 # If state file doesn't exist, the loop isn't active. Exit silently.
 if [[ ! -f "$STATE_FILE" ]]; then
+  log "State file not found. Exiting."
   exit 0
 fi
 
 # Log start
-echo "DEBUG: Iteration: $(jq -r '.iteration' "$STATE_FILE")" >> "$DEBUG_LOG"
+log "Iteration: $(jq -r '.iteration' "$STATE_FILE")"
 
 # Read all necessary data first.
 HOOK_INPUT=$(cat)
@@ -55,11 +57,8 @@ if [[ -n "$CURRENT_PROMPT" ]]; then
     '; then
      # User interjected.
      # LOGGING FOR DEBUGGING
-     echo "DEBUG: Ralph Interjection Detected!" >> .gemini/ralph-debug.log
-     echo "DEBUG: Original Prompt Length: ${#ORIGINAL_PROMPT}" >> .gemini/ralph-debug.log
-     echo "DEBUG: Current Prompt Length: ${#CURRENT_PROMPT}" >> .gemini/ralph-debug.log
-     echo "DEBUG: Original Start: ${ORIGINAL_PROMPT:0:50}" >> .gemini/ralph-debug.log
-     echo "DEBUG: Current Start: ${CURRENT_PROMPT:0:50}" >> .gemini/ralph-debug.log
+     log "Interjection Detected!"
+     log "Original len: ${#ORIGINAL_PROMPT}, Current len: ${#CURRENT_PROMPT}"
      exit 0
   fi
 fi
@@ -72,6 +71,10 @@ MAX_ITERATIONS=$(jq -r '.max_iterations' "$STATE_FILE")
 COMPLETION_PROMISE=$(jq -r '.completion_promise' "$STATE_FILE")
 PROMPT_RESPONSE=$(echo "$HOOK_INPUT" | jq -r '.prompt_response')
 
+log "Iteration: $ITERATION, Max: $MAX_ITERATIONS"
+log "Promise Target: $COMPLETION_PROMISE"
+log "Response substring: ${PROMPT_RESPONSE:0:100}..."
+
 # Termination Check 1: Completion Promise
 # Check for <promise>TEXT</promise> in the final response.
 if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
@@ -80,6 +83,7 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
   # -0777 enables "slurp" mode to match across newlines (multiline output).
   if echo "$PROMPT_RESPONSE" | perl -0777 -ne 'exit 0 if /<promise>\s*\Q'"$COMPLETION_PROMISE"'\E\s*<\/promise>/; exit 1'; then
     echo "✅ Ralph loop: Completion promise detected." >&2
+    log "Promise matched! Terminating loop."
     # Clean up all state files
     rm "$STATE_FILE"
     rm -f "$REPROMPT_FILE"
@@ -92,6 +96,8 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
         "stopReason": "✅ Ralph loop: Completion promise detected."
       }'
     exit 0
+  else
+    log "Promise check failed."
   fi
 fi
 
@@ -99,6 +105,7 @@ fi
 # Check if max_iterations is a non-zero value and if iteration has reached it.
 if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; then
   echo "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached." >&2
+  log "Max iterations reached. Terminating."
   # Clean up all state files
   rm "$STATE_FILE"
   rm -f "$REPROMPT_FILE"
@@ -115,32 +122,23 @@ fi
 
 # --- Continuation Logic ---
 
-echo "DEBUG: Continuing to iteration $((ITERATION + 1))" >> "$DEBUG_LOG"
-echo "DEBUG: Input keys: $(echo "$HOOK_INPUT" | jq -r 'keys | join(", ")')" >> "$DEBUG_LOG"
-
 NEXT_ITERATION=$((ITERATION + 1))
+log "Incrementing to iteration $NEXT_ITERATION"
 # Use jq to update the iteration in-place.
 if jq ".iteration = $NEXT_ITERATION" "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"; then
-  echo "DEBUG: State updated to iteration $NEXT_ITERATION" >> "$DEBUG_LOG"
+  log "State file updated successfully."
 else
-  echo "ERROR: Failed to update state file" >> "$DEBUG_LOG"
+  log "ERROR: Failed to update state file."
   exit 1
 fi
-
-# Create the reprompt file for the BeforeAgent hook to find.
-# Use printf to avoid adding a trailing newline, which ensures exact prompt matching in the next turn.
-printf "%s" "$ORIGINAL_PROMPT" > "$REPROMPT_FILE"
-
-# Verify write
-if [[ ! -s "$REPROMPT_FILE" ]]; then
-  echo "ERROR: Failed to write reprompt file" >> "$DEBUG_LOG"
-  exit 1
-fi
-echo "DEBUG: Reprompt file written (size: $(wc -c < "$REPROMPT_FILE"))" >> "$DEBUG_LOG"
 
 # Construct system message
 MAX_ITER_MSG_PART=$(if [[ "$MAX_ITERATIONS" -gt 0 ]]; then echo "/$MAX_ITERATIONS"; else echo " of ∞"; fi)
 SYSTEM_MSG="🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task..."
+
+# Create the reprompt file for the BeforeAgent hook to find.
+printf "%s" "$ORIGINAL_PROMPT" > "$REPROMPT_FILE"
+log "Reprompt file created."
 
 # Output JSON to force continuation.
 jq -n \
