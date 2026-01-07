@@ -37,8 +37,9 @@ PROMPT_RESPONSE=$(echo "$HOOK_INPUT" | jq -r '.prompt_response')
 # Termination Check 1: Completion Promise
 # Check for <promise>TEXT</promise> in the final response.
 if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
-  # Use grep with Perl-regex to find the promise.
-  if echo "$PROMPT_RESPONSE" | grep -qP "(<promise>\s*${COMPLETION_PROMISE}\s*</promise>)"; then
+  # Use perl for portable regex matching (grep -P is not available on macOS).
+  # We use \Q...\E to quote the promise text to treat it as a literal.
+  if echo "$PROMPT_RESPONSE" | perl -ne 'exit 0 if /<promise>\s*\Q'"$COMPLETION_PROMISE"'\E\s*<\/promise>/; exit 1'; then
     echo "✅ Ralph loop: Completion promise detected." >&2
     # Clean up all state files
     rm "$STATE_FILE"
