@@ -147,6 +147,11 @@ Turn Ralph into a task-list executor.
 ### 4. Human-in-the-Loop Pausing
 -   **Idea:** Allow the user to "pause" the loop to inspect code or manually intervene (e.g., fix a tricky bug the agent is stuck on) without killing the session state, then `/ralph:resume` to pick up where it left off.
 
+### 5. Personality & Quips (The "Full Ralph" Experience)
+-   **Idea:** Make the extension's feedback and status messages thematic.
+-   **Quips:** Inject random Ralph Wiggum quotes into the iteration banners (e.g., "I'm helping!", "My cat's breath smells like cat food").
+-   **Tone:** Allow the agent to adopt a helpful, slightly eccentric "Ralph" persona during the development loop.
+
 ## When to Use This Technique
 
 **Good for:**
