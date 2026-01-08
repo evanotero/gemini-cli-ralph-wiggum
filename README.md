@@ -8,19 +8,18 @@ This extension implements the "Ralph Wiggum" technique for iterative, self-refer
 
 The Ralph Wiggum technique is a development methodology based on continuous AI agent loops. As its creator, Geoffrey Huntley, describes it, "Ralph is a Bash loop"—a simple `while true` that repeatedly feeds an AI agent the same prompt, allowing it to iteratively improve its work until a task is complete.
 
-This extension brings that power directly into your Gemini CLI session, using a sophisticated two-hook system (`AfterAgent` and `BeforeAgent`) to create a self-referential feedback loop.
+This extension brings that power directly into your Gemini CLI session, using an `AfterAgent` hook to create a self-referential feedback loop.
 
 ### Core Concept
 
-The loop happens **across agent turns**, explicitly controlled by the extension's hooks.
+The loop happens **across agent turns**, explicitly controlled by the extension's hook.
 
--   The **`AfterAgent` hook (Controller)** runs after each turn. It evaluates whether the loop should terminate (e.g., max iterations reached, completion promise met). If the loop needs to continue, it signals the `BeforeAgent` hook and forces the CLI into a new turn.
--   The **`BeforeAgent` hook (Injector)** runs before each new turn. If signaled by the `AfterAgent` hook, it injects the original prompt back into the agent's context, ensuring the agent continues working on the same task.
--   **Inter-Hook Communication:** A temporary file (`.gemini/ralph-reprompt.tmp`) is used to pass the prompt from the Controller to the Injector.
--   **User Interjection:** The loop gracefully handles user interruptions. If you submit a new prompt, the loop will pause for that turn to address your input before automatically resuming on the next agent turn.
+-   The **`AfterAgent` hook (Controller)** runs after each turn. It evaluates whether the loop should terminate (e.g., max iterations reached, completion promise met). 
+-   **Loop Continuation:** If the loop needs to continue, the hook instructs the CLI to start a new turn and provides a `systemMessage` containing the original prompt. This ensures the agent remains focused on the original task.
+-   **User Interjection:** The loop gracefully handles user interruptions. If you submit a new prompt, the loop detects the change and pauses to address your input before automatically resuming the task on the next agent turn.
 
 This creates a **self-referential feedback loop** where:
--   The prompt never changes between iterations (unless you interject).
+-   The original task context is maintained via system messages.
 -   The agent's previous work (modified files, git history) persists.
 -   Each iteration allows the agent to see the current state of the codebase and improve upon its past work.
 
