@@ -146,8 +146,7 @@ FINAL_JSON=$(jq -n \
     "decision": "block",
     "continue": true,
     "systemMessage": $msg,
-    "reason": $reason,
-    "suppressOutput": false
+    "reason": $reason
   }')
 
 log "Outputting JSON: $FINAL_JSON"
