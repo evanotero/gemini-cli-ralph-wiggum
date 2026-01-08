@@ -58,6 +58,7 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
       --arg msg "✅ Ralph loop: Completion promise detected. Terminating." \
       '{
         "continue": false,
+        "stopReason": $msg,
         "systemMessage": $msg
       }'
     exit 0
@@ -72,6 +73,7 @@ if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; th
     --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating." \
     '{
       "continue": false,
+      "stopReason": $msg,
       "systemMessage": $msg
     }'
   exit 0
