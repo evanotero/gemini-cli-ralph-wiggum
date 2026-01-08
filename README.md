@@ -45,6 +45,24 @@ Gemini will:
 -   Refactor code based on previous attempts.
 -   Continue until all requirements are met and it outputs the completion promise.
 
+## Configuration
+
+This extension requires hooks to be enabled in your Gemini CLI configuration (usually `~/.gemini/gemini.json`). Add the following flags to your configuration file:
+
+```json
+{
+  "tools": {
+    "enableHooks": true
+  },
+  "hooks": {
+    "enabled": true,
+    "disabled": [
+      "tool-logger"
+    ]
+  }
+}
+```
+
 ## Commands
 
 ### `/ralph:loop`
