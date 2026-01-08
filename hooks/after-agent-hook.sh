@@ -13,9 +13,6 @@ if [[ ! -f "$STATE_FILE" ]]; then
   exit 0
 fi
 
-# Log start
-log "Iteration: $(jq -r '.iteration' "$STATE_FILE")"
-
 # Read all necessary data first.
 HOOK_INPUT=$(cat)
 ORIGINAL_PROMPT=$(jq -r '.prompt' "$STATE_FILE")
