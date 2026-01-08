@@ -96,7 +96,7 @@ Provide a clear, verifiable definition of "done." The `--completion-promise` is 
 
 **Good:**
 ```
-/ralph:loop "Build a REST API for todos. When all CRUD endpoints are working and all tests pass with >80% coverage, output the text '<promise>TASK_COMPLETE</promise>'." --completion-promise "<promise>TASK_COMPLETE</promise>"
+/ralph:loop "Build a REST API for todos. When all CRUD endpoints are working and all tests pass with >80% coverage, output the text '<promise>TASK_COMPLETE</promise>'." --completion-promise "TASK_COMPLETE"
 ```
 
 ### 2. Use Safety Hatches
