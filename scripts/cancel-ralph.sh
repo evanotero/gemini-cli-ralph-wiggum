@@ -1,16 +1,15 @@
 #!/bin/bash
 # scripts/cancel-ralph.sh
 
-# This script cancels an active Ralph Wiggum loop by removing the state file.
+# This script stops the Ralph Wiggum loop by removing the state file.
 
 set -euo pipefail
 
-STATE_FILE=".gemini/ralph-loop.json"
+STATE_FILE=".gemini/ralph-state.md"
 
 if [[ -f "$STATE_FILE" ]]; then
-  ITERATION=$(jq -r '.iteration' "$STATE_FILE")
   rm "$STATE_FILE"
-  echo "✅ Ralph loop canceled at iteration $ITERATION."
+  echo "✅ Ralph loop cancelled."
 else
-  echo "No active Ralph loop found."
+  echo "⚠️  No active Ralph loop found."
 fi

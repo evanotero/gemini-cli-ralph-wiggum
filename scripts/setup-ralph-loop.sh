@@ -2,6 +2,7 @@
 # scripts/setup-ralph-loop.sh
 
 # This script initializes the Ralph Wiggum loop by creating a state file.
+# Updated to use Frontmatter + Text format for better prompt handling.
 
 set -euo pipefail
 
@@ -11,8 +12,6 @@ MAX_ITERATIONS=0
 COMPLETION_PROMISE="null"
 
 # If we received a single argument that contains spaces, it's likely the full {{args}} string.
-# We use xargs to correctly split the string respecting quotes (shell-style parsing),
-# which is safer and more robust than simple whitespace splitting.
 if [[ $# -eq 1 ]] && [[ "$1" == *" "* ]]; then
   SPLIT_ARGS=()
   while IFS= read -r -d '' arg; do
@@ -47,7 +46,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# If no prompt parts were collected, raise an error immediately.
 if [ ${#PROMPT_PARTS[@]} -eq 0 ]; then
   echo "ERROR: No prompt provided for the loop." >&2
   exit 1
@@ -71,20 +69,17 @@ If a "Completion promise" is defined above (e.g., specific text to output):
 *   You **MUST NOT** output that phrase until the condition is **100% GENUINELY TRUE**.
 *   **DO NOT LIE** to exit the loop. If tests are failing, fix them. If the feature is incomplete, finish it.
 *   **REQUIRED FORMAT:** When the condition is met, you must output the promise wrapped in XML tags like this:
-    \`<promise>YOUR_PROMISE_TEXT</promise>\`
-    (Example: \`<promise>PROMISE_KEPT</promise>\`)
+    `<promise>YOUR_PROMISE_TEXT</promise>`
+    (Example: `<promise>PROMISE_KEPT</promise>`)
 *   If you output the promise prematurely, you defeat the purpose of the loop.
 
 **Goal:** Work autonomously to satisfy the initial prompt completely.
 EOF
 )
 
-# Banner information
 MAX_ITER_TXT=$(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
 PROMISE_TXT=$(if [[ "$COMPLETION_PROMISE" != "null" ]]; then echo "'$COMPLETION_PROMISE'"; else echo "none"; fi)
 
-# Construct the exact text that will be the "Original Prompt"
-# We include the banner info so the model is aware of its constraints.
 FULL_PROMPT="Max iterations: $MAX_ITER_TXT
 Completion promise: $PROMISE_TXT
 
@@ -92,20 +87,21 @@ Initial prompt:
 $PROMPT
 $SYSTEM_INSTRUCTIONS"
 
-# Create state directory and file
+# Create state directory and file with Frontmatter format
+# We use YAML-style frontmatter bounded by ---
 mkdir -p .gemini
-cat > .gemini/ralph-loop.json <<EOF
-{
-  "prompt": $(jq -n --arg prompt "$FULL_PROMPT" '$prompt'),
-  "iteration": 1,
-  "max_iterations": $MAX_ITERATIONS,
-  "completion_promise": $(jq -n --arg promise "$COMPLETION_PROMISE" '$promise'),
-  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
+cat > .gemini/ralph-state.md <<EOF
+---
+iteration: 1
+max_iterations: $MAX_ITERATIONS
+completion_promise: "$COMPLETION_PROMISE"
+started_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+---
+$FULL_PROMPT
 EOF
 
 # Output setup message (and prompt) to stdout for the model
 printf "%s" "$FULL_PROMPT"
 
-# Output info to stderr for the user (optional, but good for feedback if !{...} hides stdout)
-echo "🔄 Ralph loop activated! " >&2
+# Output info to stderr for the user
+echo "🔄 Ralph loop activated! (State file: .gemini/ralph-state.md)" >&2

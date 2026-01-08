@@ -2,94 +2,77 @@
 # hooks/after-agent-hook.sh
 # The "Controller" hook for the Ralph Wiggum loop.
 # Decides if the loop should continue, and if so, passes the prompt
-# back via the systemMessage.
+# back via the 'reason' field.
 
 set -euo pipefail
 
-STATE_FILE=".gemini/ralph-loop.json"
+RALPH_STATE_FILE=".gemini/ralph-state.md"
 
 # If state file doesn't exist, the loop isn't active. Exit silently.
-if [[ ! -f "$STATE_FILE" ]]; then
+if [[ ! -f "$RALPH_STATE_FILE" ]]; then
   exit 0
 fi
 
-# Read all necessary data first.
+# Read necessary data
 HOOK_INPUT=$(cat)
-ORIGINAL_PROMPT=$(jq -r '.prompt' "$STATE_FILE")
-CURRENT_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt')
 
-# Handle user interjection.
-# Logic:
-# 1. If CURRENT_PROMPT is empty, it's a loop continuation (User hit Enter/Auto-run). PROCEED.
-# 2. If CURRENT_PROMPT matches ORIGINAL_PROMPT, it's the first turn or a re-prompt. PROCEED.
-# 3. If CURRENT_PROMPT contains ORIGINAL_PROMPT (or vice versa), it's likely a formatting artifact. PROCEED.
-# 4. Otherwise, the user typed something new. EXIT (Interjection).
+# Extract variables from Frontmatter
+ITERATION=$(grep "^iteration:" "$RALPH_STATE_FILE" | head -n1 | cut -d' ' -f2)
+MAX_ITERATIONS=$(grep "^max_iterations:" "$RALPH_STATE_FILE" | head -n1 | cut -d' ' -f2)
+COMPLETION_PROMISE=$(grep "^completion_promise:" "$RALPH_STATE_FILE" | head -n1 | sed 's/^completion_promise: \(.*\)"$/\1/')
 
-if [[ -n "$CURRENT_PROMPT" ]]; then
-  # Use Perl to check if one string contains the other (literally).
-  # We pass strings as env vars to avoid argument length limits or escaping issues.
-  export CURRENT_PROMPT ORIGINAL_PROMPT
-  if ! perl -e '
-      my $c = $ENV{CURRENT_PROMPT};
-      my $o = $ENV{ORIGINAL_PROMPT};
-      # 1. Exact match
-      exit 0 if $c eq $o;
-      # 2. Current contains Original (e.g. CLI added context wrapper)
-      exit 0 if index($c, $o) != -1;
-      # 3. Original contains Current (e.g. User typed a substring of the prompt?)
-      # This case is debatable but present in original logic to handle potential truncation.
-      exit 0 if index($o, $c) != -1;
-      # No match found -> Interjection.
-      exit 1;
-    '; then
-     # User interjected.
-     exit 0
-  fi
+# --- Defensive Validation (Adopted from Claude Code logic) ---
+
+# Validate numeric fields
+if [[ ! "$ITERATION" =~ ^[0-9]+$ ]] || [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
+  echo "⚠️  Ralph loop: State file corrupted" >&2
+  echo "   File: $RALPH_STATE_FILE" >&2
+  echo "   Problem: 'iteration' or 'max_iterations' is not a valid number." >&2
+  echo "" >&2
+  echo "   Ralph loop is stopping. Run /ralph:loop again to start fresh." >&2
+  rm "$RALPH_STATE_FILE"
+  exit 0
 fi
 
-# -- This is a loop turn, proceed with main logic. --
+# Extract PROMPT using awk (skip frontmatter)
+PROMPT_TEXT=$(awk '/^---$/{i++; next} i>=2' "$RALPH_STATE_FILE")
 
-# Get other state variables.
-ITERATION=$(jq -r '.iteration' "$STATE_FILE")
-MAX_ITERATIONS=$(jq -r '.max_iterations' "$STATE_FILE")
-COMPLETION_PROMISE=$(jq -r '.completion_promise' "$STATE_FILE")
-PROMPT_RESPONSE=$(echo "$HOOK_INPUT" | jq -r '.prompt_response')
+if [[ -z "$PROMPT_TEXT" ]]; then
+  echo "⚠️  Ralph loop: State file corrupted or incomplete" >&2
+  echo "   Problem: No prompt text found in $RALPH_STATE_FILE" >&2
+  echo "   Ralph loop is stopping." >&2
+  rm "$RALPH_STATE_FILE"
+  exit 0
+fi
 
-# Termination Check 1: Completion Promise
-# Check for <promise>TEXT</promise> in the final response.
+PROMPT_RESPONSE=$(echo "$HOOK_INPUT" | jq -r '.prompt_response // empty')
+
+# --- Termination Checks ---
+
+# 1. Completion Promise
 if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
-  # Use perl for portable regex matching (grep -P is not available on macOS).
-  # We use \Q...\E to quote the promise text to treat it as a literal.
-  # -0777 enables "slurp" mode to match across newlines (multiline output).
   if echo "$PROMPT_RESPONSE" | perl -0777 -ne 'exit 0 if /<promise>\s*\Q'"$COMPLETION_PROMISE"'\E\s*<\/promise>/; exit 1'; then
     echo "✅ Ralph loop: Completion promise detected." >&2
-    # Clean up state file
-    rm "$STATE_FILE"
-    # Explicitly tell the CLI to stop the loop
+    rm "$RALPH_STATE_FILE"
     jq -n \
       --arg msg "✅ Ralph loop: Completion promise detected. Terminating." \
       '{
         "continue": false,
-        "systemMessage": $msg,
-        "stopReason": "✅ Ralph loop: Completion promise detected."
+        "systemMessage": $msg
       }'
     exit 0
   fi
 fi
 
-# Termination Check 2: Max Iterations
-# Check if max_iterations is a non-zero value and if iteration has reached it.
+# 2. Max Iterations
 if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; then
   echo "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached." >&2
-  # Clean up state file
-  rm "$STATE_FILE"
-  # Explicitly tell the CLI to stop the loop
+  rm "$RALPH_STATE_FILE"
   jq -n \
     --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating." \
     '{
       "continue": false,
-      "systemMessage": $msg,
-      "stopReason": "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."
+      "systemMessage": $msg
     }'
   exit 0
 fi
@@ -97,29 +80,28 @@ fi
 # --- Continuation Logic ---
 
 NEXT_ITERATION=$((ITERATION + 1))
-# Use jq to update the iteration in-place.
-if jq ".iteration = $NEXT_ITERATION" "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"; then
-  : # State file updated successfully.
+
+# Update iteration in frontmatter atomically
+TEMP_FILE="${RALPH_STATE_FILE}.tmp.$$"
+sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$RALPH_STATE_FILE" > "$TEMP_FILE"
+mv "$TEMP_FILE" "$RALPH_STATE_FILE"
+
+# Build system message with iteration count
+if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
+  SYSTEM_MSG="🔄 Ralph iteration $NEXT_ITERATION | To stop: output <promise>$COMPLETION_PROMISE</promise>"
 else
-  exit 1
+  SYSTEM_MSG="🔄 Ralph iteration $NEXT_ITERATION | No completion promise set - loop runs infinitely"
 fi
 
-# Construct system message
-MAX_ITER_MSG_PART=$(if [[ "$MAX_ITERATIONS" -gt 0 ]]; then echo "/$MAX_ITERATIONS"; else echo " of ∞"; fi)
-
-# We include the original prompt in the system message to keep the agent on track.
-SYSTEM_MSG="🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task...\n\nOriginal Prompt:\n${ORIGINAL_PROMPT}"
-
-# Construct the final JSON
-FINAL_JSON=$(jq -n \
+# Output JSON to inject the prompt back
+jq -n \
+  --arg prompt "$PROMPT_TEXT" \
   --arg msg "$SYSTEM_MSG" \
-  --arg reason "🔄 Ralph: Continuing to iteration $NEXT_ITERATION..." \
   '{
     "decision": "block",
     "continue": true,
-    "systemMessage": $msg,
-    "reason": $reason
-  }')
+    "reason": $prompt,
+    "systemMessage": $msg
+  }'
 
-echo "$FINAL_JSON"
 exit 0
