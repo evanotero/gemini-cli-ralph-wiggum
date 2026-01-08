@@ -104,6 +104,12 @@ cat > .gemini/ralph-loop.json <<EOF
 }
 EOF
 
+# Initialize debug log
+echo "[$(date +'%Y-%m-%dT%H:%M:%S')] --- Loop Started ---" >> .gemini/ralph-debug.log
+echo "[$(date +'%Y-%m-%dT%H:%M:%S')] Prompt length: ${#FULL_PROMPT} chars" >> .gemini/ralph-debug.log
+echo "[$(date +'%Y-%m-%dT%H:%M:%S')] Max iterations: $MAX_ITERATIONS" >> .gemini/ralph-debug.log
+echo "[$(date +'%Y-%m-%dT%H:%M:%S')] Promise: $COMPLETION_PROMISE" >> .gemini/ralph-debug.log
+
 # Output setup message (and prompt) to stdout for the model
 printf "%s" "$FULL_PROMPT"
 

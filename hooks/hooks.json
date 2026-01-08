@@ -11,18 +11,6 @@
           }
         ]
       }
-    ],
-    "BeforeAgent": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "name": "ralph-loop-injector",
-            "type": "command",
-            "command": "${extensionPath}/hooks/before-agent-hook.sh"
-          }
-        ]
-      }
     ]
   }
 }

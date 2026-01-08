@@ -1,13 +1,12 @@
 #!/bin/bash
 # hooks/after-agent-hook.sh
 # The "Controller" hook for the Ralph Wiggum loop.
-# Decides if the loop should continue, and if so, leaves a message
-# for the "Injector" hook.
+# Decides if the loop should continue, and if so, passes the prompt
+# back via the systemMessage.
 
 set -euo pipefail
 
 STATE_FILE=".gemini/ralph-loop.json"
-REPROMPT_FILE=".gemini/ralph-reprompt.tmp"
 DEBUG_LOG=".gemini/ralph-debug.log"
 
 log() {
@@ -84,16 +83,15 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
   if echo "$PROMPT_RESPONSE" | perl -0777 -ne 'exit 0 if /<promise>\s*\Q'"$COMPLETION_PROMISE"'\E\s*<\/promise>/; exit 1'; then
     echo "✅ Ralph loop: Completion promise detected." >&2
     log "Promise matched! Terminating loop."
-    # Clean up all state files
+    # Clean up state file
     rm "$STATE_FILE"
-    rm -f "$REPROMPT_FILE"
     # Explicitly tell the CLI to stop the loop
     jq -n \
-      --arg msg "✅ Ralph loop: Completion promise detected. Terminating." \
-      '{
-        "continue": false,
-        "systemMessage": $msg,
-        "stopReason": "✅ Ralph loop: Completion promise detected."
+      --arg msg "✅ Ralph loop: Completion promise detected. Terminating."
+      '{ \
+        "continue": false, \
+        "systemMessage": $msg, \
+        "stopReason": "✅ Ralph loop: Completion promise detected." \
       }'
     exit 0
   else
@@ -106,16 +104,15 @@ fi
 if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; then
   echo "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached." >&2
   log "Max iterations reached. Terminating."
-  # Clean up all state files
+  # Clean up state file
   rm "$STATE_FILE"
-  rm -f "$REPROMPT_FILE"
   # Explicitly tell the CLI to stop the loop
   jq -n \
-    --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating." \
-    '{
-      "continue": false,
-      "systemMessage": $msg,
-      "stopReason": "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."
+    --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating."
+    '{ \
+      "continue": false, \
+      "systemMessage": $msg, \
+      "stopReason": "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached." \
     }'
   exit 0
 fi
@@ -134,23 +131,23 @@ fi
 
 # Construct system message
 MAX_ITER_MSG_PART=$(if [[ "$MAX_ITERATIONS" -gt 0 ]]; then echo "/$MAX_ITERATIONS"; else echo " of ∞"; fi)
-SYSTEM_MSG="🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task..."
 
-# Create the reprompt file for the BeforeAgent hook to find (backup).
-printf "%s" "$ORIGINAL_PROMPT" > "$REPROMPT_FILE"
-log "Reprompt file created."
+# We include the original prompt in the system message to keep the agent on track.
+SYSTEM_MSG="🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task...\n\nOriginal Prompt:\n${ORIGINAL_PROMPT}"
+
+log "Constructed System Message. Total length: ${#SYSTEM_MSG} chars."
+log "Re-injecting Original Prompt (${#ORIGINAL_PROMPT} chars) via systemMessage."
 
 # Construct the final JSON
-# We include multiple possible keys for the next prompt to ensure compatibility with CLI 0.24.
-# The TypeError confirmed the CLI is looking for 'additionalContext' in 'hookSpecificOutput'.
 FINAL_JSON=$(jq -n \
   --arg msg "$SYSTEM_MSG" \
-  --arg prompt "$ORIGINAL_PROMPT" \
-  '{
-    "decision": "block",
-    "continue": true,
-    "systemMessage": $msg,
-    "suppressOutput": false,
+  --arg reason "🔄 Ralph: Continuing to iteration $NEXT_ITERATION..." \
+  '{ \
+    "decision": "block", \
+    "continue": true, \
+    "systemMessage": $msg, \
+    "reason": $reason, \
+    "suppressOutput": false \
   }')
 
 log "Outputting JSON: $FINAL_JSON"
