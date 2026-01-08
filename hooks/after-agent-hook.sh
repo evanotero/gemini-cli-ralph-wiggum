@@ -136,16 +136,23 @@ fi
 MAX_ITER_MSG_PART=$(if [[ "$MAX_ITERATIONS" -gt 0 ]]; then echo "/$MAX_ITERATIONS"; else echo " of ∞"; fi)
 SYSTEM_MSG="🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task..."
 
-# Create the reprompt file for the BeforeAgent hook to find.
+# Create the reprompt file for the BeforeAgent hook to find (backup).
 printf "%s" "$ORIGINAL_PROMPT" > "$REPROMPT_FILE"
 log "Reprompt file created."
 
-# Output JSON to force continuation.
-jq -n \
+# Construct the final JSON
+# We include multiple possible keys for the next prompt to ensure compatibility with CLI 0.24.
+# The TypeError confirmed the CLI is looking for 'additionalContext' in 'hookSpecificOutput'.
+FINAL_JSON=$(jq -n \
   --arg msg "$SYSTEM_MSG" \
+  --arg prompt "$ORIGINAL_PROMPT" \
   '{
+    "decision": "block",
     "continue": true,
-    "systemMessage": $msg
-  }'
+    "systemMessage": $msg,
+    "suppressOutput": false,
+  }')
 
+log "Outputting JSON: $FINAL_JSON"
+echo "$FINAL_JSON"
 exit 0
