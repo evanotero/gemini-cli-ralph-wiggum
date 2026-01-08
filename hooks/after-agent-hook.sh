@@ -7,18 +7,9 @@
 set -euo pipefail
 
 STATE_FILE=".gemini/ralph-loop.json"
-DEBUG_LOG=".gemini/ralph-debug.log"
-
-log() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S')] $*" >> "$DEBUG_LOG"
-}
-
-# Log start
-log "--- AfterAgent Hook Started ---"
 
 # If state file doesn't exist, the loop isn't active. Exit silently.
 if [[ ! -f "$STATE_FILE" ]]; then
-  log "State file not found. Exiting."
   exit 0
 fi
 
@@ -55,9 +46,6 @@ if [[ -n "$CURRENT_PROMPT" ]]; then
       exit 1;
     '; then
      # User interjected.
-     # LOGGING FOR DEBUGGING
-     log "Interjection Detected!"
-     log "Original len: ${#ORIGINAL_PROMPT}, Current len: ${#CURRENT_PROMPT}"
      exit 0
   fi
 fi
@@ -70,10 +58,6 @@ MAX_ITERATIONS=$(jq -r '.max_iterations' "$STATE_FILE")
 COMPLETION_PROMISE=$(jq -r '.completion_promise' "$STATE_FILE")
 PROMPT_RESPONSE=$(echo "$HOOK_INPUT" | jq -r '.prompt_response')
 
-log "Iteration: $ITERATION, Max: $MAX_ITERATIONS"
-log "Promise Target: $COMPLETION_PROMISE"
-log "Response substring: ${PROMPT_RESPONSE:0:100}..."
-
 # Termination Check 1: Completion Promise
 # Check for <promise>TEXT</promise> in the final response.
 if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
@@ -82,7 +66,6 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
   # -0777 enables "slurp" mode to match across newlines (multiline output).
   if echo "$PROMPT_RESPONSE" | perl -0777 -ne 'exit 0 if /<promise>\s*\Q'"$COMPLETION_PROMISE"'\E\s*<\/promise>/; exit 1'; then
     echo "✅ Ralph loop: Completion promise detected." >&2
-    log "Promise matched! Terminating loop."
     # Clean up state file
     rm "$STATE_FILE"
     # Explicitly tell the CLI to stop the loop
@@ -94,8 +77,6 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
         "stopReason": "✅ Ralph loop: Completion promise detected."
       }'
     exit 0
-  else
-    log "Promise check failed."
   fi
 fi
 
@@ -103,7 +84,6 @@ fi
 # Check if max_iterations is a non-zero value and if iteration has reached it.
 if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; then
   echo "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached." >&2
-  log "Max iterations reached. Terminating."
   # Clean up state file
   rm "$STATE_FILE"
   # Explicitly tell the CLI to stop the loop
@@ -120,12 +100,10 @@ fi
 # --- Continuation Logic ---
 
 NEXT_ITERATION=$((ITERATION + 1))
-log "Incrementing to iteration $NEXT_ITERATION"
 # Use jq to update the iteration in-place.
 if jq ".iteration = $NEXT_ITERATION" "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"; then
-  log "State file updated successfully."
+  : # State file updated successfully.
 else
-  log "ERROR: Failed to update state file."
   exit 1
 fi
 
@@ -134,9 +112,6 @@ MAX_ITER_MSG_PART=$(if [[ "$MAX_ITERATIONS" -gt 0 ]]; then echo "/$MAX_ITERATION
 
 # We include the original prompt in the system message to keep the agent on track.
 SYSTEM_MSG="🔄 Ralph iteration ${NEXT_ITERATION}${MAX_ITER_MSG_PART}. Continuing task...\n\nOriginal Prompt:\n${ORIGINAL_PROMPT}"
-
-log "Constructed System Message. Total length: ${#SYSTEM_MSG} chars."
-log "Re-injecting Original Prompt (${#ORIGINAL_PROMPT} chars) via systemMessage."
 
 # Construct the final JSON
 FINAL_JSON=$(jq -n \
@@ -149,6 +124,5 @@ FINAL_JSON=$(jq -n \
     "reason": $reason
   }')
 
-log "Outputting JSON: $FINAL_JSON"
 echo "$FINAL_JSON"
 exit 0
