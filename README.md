@@ -124,6 +124,29 @@ Implement feature X by following TDD:
 7. When complete, output the phrase 'TESTS_PASSED'.
 ```
 
+## Roadmap & Future Ideas
+
+We are actively exploring ways to make Ralph smarter and more autonomous. Here are some ideas on the horizon:
+
+### 1. The "Product Manager" Upgrade (PRD Support)
+Instead of fitting everything into a single CLI prompt, pass a comprehensive Product Requirement Document (PRD).
+-   **Idea:** `/ralph:loop --prd ./specs/feature-v2.md`
+-   **Benefit:** Allows the agent to work against a detailed, multi-page specification without hitting CLI character limits or losing context.
+
+### 2. The "Project Manager" Upgrade (Feature & Todo Tracking)
+Turn Ralph into a task-list executor.
+-   **Idea:** Ralph maintains a `FEATURES.md` or `TODO.md` file in the repository.
+-   **Logic:** The loop hook reads the file, finds the next unchecked item, and injects it into the prompt as the "Current Focus".
+-   **Completion:** The loop continues until all features are implemented and items are marked as complete `[x]`.
+
+### 3. Better Progress Tracking & Notes
+-   **Idea:** A `/ralph:status` command to show the current iteration and status.
+-   **Persistent Logs:** Automatically maintain a `RALPH_LOG.md` file. The agent would append a brief summary of each iteration, decisions made, and current blockers, providing a readable history of the session.
+-   **Visuals:** A live progress bar or status dashboard within the terminal.
+
+### 4. Human-in-the-Loop Pausing
+-   **Idea:** Allow the user to "pause" the loop to inspect code or manually intervene (e.g., fix a tricky bug the agent is stuck on) without killing the session state, then `/ralph:resume` to pick up where it left off.
+
 ## When to Use This Technique
 
 **Good for:**
