@@ -87,11 +87,11 @@ if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
     rm "$STATE_FILE"
     # Explicitly tell the CLI to stop the loop
     jq -n \
-      --arg msg "✅ Ralph loop: Completion promise detected. Terminating."
-      '{ \
-        "continue": false, \
-        "systemMessage": $msg, \
-        "stopReason": "✅ Ralph loop: Completion promise detected." \
+      --arg msg "✅ Ralph loop: Completion promise detected. Terminating." \
+      '{
+        "continue": false,
+        "systemMessage": $msg,
+        "stopReason": "✅ Ralph loop: Completion promise detected."
       }'
     exit 0
   else
@@ -108,11 +108,11 @@ if [[ "$MAX_ITERATIONS" -gt 0 ]] && [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; th
   rm "$STATE_FILE"
   # Explicitly tell the CLI to stop the loop
   jq -n \
-    --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating."
-    '{ \
-      "continue": false, \
-      "systemMessage": $msg, \
-      "stopReason": "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached." \
+    --arg msg "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached. Terminating." \
+    '{
+      "continue": false,
+      "systemMessage": $msg,
+      "stopReason": "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."
     }'
   exit 0
 fi
@@ -142,12 +142,12 @@ log "Re-injecting Original Prompt (${#ORIGINAL_PROMPT} chars) via systemMessage.
 FINAL_JSON=$(jq -n \
   --arg msg "$SYSTEM_MSG" \
   --arg reason "🔄 Ralph: Continuing to iteration $NEXT_ITERATION..." \
-  '{ \
-    "decision": "block", \
-    "continue": true, \
-    "systemMessage": $msg, \
-    "reason": $reason, \
-    "suppressOutput": false \
+  '{
+    "decision": "block",
+    "continue": true,
+    "systemMessage": $msg,
+    "reason": $reason,
+    "suppressOutput": false
   }')
 
 log "Outputting JSON: $FINAL_JSON"
