@@ -53,6 +53,12 @@ fi
 
 PROMPT="${PROMPT_PARTS[*]}"
 
+# Initialize progress file for the new loop session
+mkdir -p .gemini
+echo "# Ralph Loop Progress Log" > .gemini/ralph-progress.txt
+echo "Started at: $(date)" >> .gemini/ralph-progress.txt
+echo "--------------------------------------------------" >> .gemini/ralph-progress.txt
+
 # Construct the full prompt including instructions
 SYSTEM_INSTRUCTIONS=$(cat <<EOF
 
@@ -63,6 +69,19 @@ You are now in a **persistent, self-correcting development loop**.
 1.  **Iterative Workflow:** When you complete this turn, the **exact same prompt** (above) will be fed back to you automatically.
 2.  **Memory:** You will see your previous work (files, git history) in the next iteration. Use this to refine, debug, and improve your solution step-by-step.
 3.  **Termination:** The loop continues INDEFINITELY until the termination condition is met.
+
+**CRITICAL: PROGRESS TRACKING**
+*   **START OF TURN:** You MUST read \`.gemini/ralph-progress.txt\` to understand the history of this session.
+*   **END OF TURN:** You MUST append a structured summary of this iteration to \`.gemini/ralph-progress.txt\`.
+    *   Format:
+        \`\`\`text
+        ## Iteration [Number]
+        - **Done:** [Brief summary of actions]
+        - **Decisions:** [Key decisions made]
+        - **Blockers:** [Current issues/errors]
+        - **Next:** [Plan for next iteration]
+        \`\`\`
+    *   Use \`run_shell_command\` to append to the file (e.g. \`printf "... " >> .gemini/ralph-progress.txt\`).
 
 **CRITICAL RULE: COMPLETION PROMISE**
 If a "Completion promise" is defined above (e.g., specific text to output):
